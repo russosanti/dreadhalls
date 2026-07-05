@@ -12,6 +12,7 @@ public class HoleDeath : MonoBehaviour
         if (!gameOver && transform.position.y < deathY)
         {
             gameOver = true;
+            GameSession.Reset();
             SceneManager.LoadScene("GameOver");
         }
     }
