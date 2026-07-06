@@ -1,6 +1,6 @@
 using System;
 using UnityEngine;
-using UnityStandardAssets.CrossPlatformInput;
+using UnityEngine.InputSystem;
 using UnityStandardAssets.Utility;
 using Random = UnityEngine.Random;
 
@@ -8,6 +8,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
 {
     [RequireComponent(typeof (CharacterController))]
     [RequireComponent(typeof (AudioSource))]
+    [RequireComponent(typeof(PlayerInput))]
     public class FirstPersonController : MonoBehaviour
     {
         [SerializeField] private bool m_IsWalking;
@@ -27,6 +28,8 @@ namespace UnityStandardAssets.Characters.FirstPerson
         [SerializeField] private AudioClip[] m_FootstepSounds;    // an array of footstep sounds that will be randomly selected from.
         [SerializeField] private AudioClip m_JumpSound;           // the sound played when character leaves the ground.
         [SerializeField] private AudioClip m_LandSound;           // the sound played when character touches back on ground.
+        [SerializeField] private float mouseSensitivity = 0.1f;
+        [SerializeField] private float stickLookSpeed = 120f;
 
         private Camera m_Camera;
         private bool m_Jump;
@@ -41,10 +44,23 @@ namespace UnityStandardAssets.Characters.FirstPerson
         private float m_NextStep;
         private bool m_Jumping;
         private AudioSource m_AudioSource;
+        
+        private InputAction moveAction;
+        private InputAction lookMouseAction;
+        private InputAction lookStickAction;
+        private InputAction jumpAction;
+        private InputAction sprintAction;
 
         // Use this for initialization
         private void Start()
         {
+            PlayerInput playerInput = GetComponent<PlayerInput>();
+            moveAction = playerInput.actions.FindAction("Player/Move", true);
+            lookMouseAction = playerInput.actions.FindAction("Player/LookMouse", true);
+            lookStickAction = playerInput.actions.FindAction("Player/LookStick", true);
+            jumpAction = playerInput.actions.FindAction("Player/Jump", true);
+            sprintAction = playerInput.actions.FindAction("Player/Sprint", true);
+            
             m_CharacterController = GetComponent<CharacterController>();
             m_Camera = Camera.main;
             m_OriginalCameraPosition = m_Camera.transform.localPosition;
@@ -65,7 +81,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
             // the jump state needs to read here to make sure it is not missed
             if (!m_Jump)
             {
-                m_Jump = CrossPlatformInputManager.GetButtonDown("Jump");
+                m_Jump = jumpAction.WasPressedThisFrame();
             }
 
             if (!m_PreviouslyGrounded && m_CharacterController.isGrounded)
@@ -123,7 +139,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
             }
             else
             {
-                m_MoveDir += Physics.gravity*m_GravityMultiplier*Time.fixedDeltaTime;
+                m_MoveDir += Physics.gravity * (m_GravityMultiplier * Time.fixedDeltaTime);
             }
             m_CollisionFlags = m_CharacterController.Move(m_MoveDir*Time.fixedDeltaTime);
 
@@ -204,16 +220,13 @@ namespace UnityStandardAssets.Characters.FirstPerson
         private void GetInput(out float speed)
         {
             // Read input
-            float horizontal = CrossPlatformInputManager.GetAxis("Horizontal");
-            float vertical = CrossPlatformInputManager.GetAxis("Vertical");
+            Vector2 movement = moveAction.ReadValue<Vector2>();
+            float horizontal = movement.x;
+            float vertical = movement.y;
 
             bool waswalking = m_IsWalking;
-
-#if !MOBILE_INPUT
-            // On standalone builds, walk/run speed is modified by a key press.
-            // keep track of whether or not the character is walking or running
-            m_IsWalking = !Input.GetKey(KeyCode.LeftShift);
-#endif
+            m_IsWalking = !sprintAction.IsPressed();
+            
             // set the desired speed to be walking or running
             speed = m_IsWalking ? m_WalkSpeed : m_RunSpeed;
             m_Input = new Vector2(horizontal, vertical);
@@ -236,7 +249,15 @@ namespace UnityStandardAssets.Characters.FirstPerson
 
         private void RotateView()
         {
-            m_MouseLook.LookRotation (transform, m_Camera.transform);
+            Vector2 mouseLook =
+                lookMouseAction.ReadValue<Vector2>() * mouseSensitivity;
+
+            Vector2 stickLook =
+                lookStickAction.ReadValue<Vector2>()
+                * (stickLookSpeed * Time.deltaTime);
+
+            Vector2 lookDelta = mouseLook + stickLook;
+            m_MouseLook.LookRotation (transform, m_Camera.transform, lookDelta);
         }
 
 
