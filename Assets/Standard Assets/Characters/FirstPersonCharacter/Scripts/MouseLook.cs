@@ -1,6 +1,6 @@
 using System;
 using UnityEngine;
-using UnityStandardAssets.CrossPlatformInput;
+using UnityEngine.InputSystem;
 
 namespace UnityStandardAssets.Characters.FirstPerson
 {
@@ -28,10 +28,10 @@ namespace UnityStandardAssets.Characters.FirstPerson
         }
 
 
-        public void LookRotation(Transform character, Transform camera)
+        public void LookRotation(Transform character, Transform camera, Vector2 lookDelta)
         {
-            float yRot = CrossPlatformInputManager.GetAxis("Mouse X") * XSensitivity;
-            float xRot = CrossPlatformInputManager.GetAxis("Mouse Y") * YSensitivity;
+            float yRot = lookDelta.x;
+            float xRot = lookDelta.y;
 
             m_CharacterTargetRot *= Quaternion.Euler (0f, yRot, 0f);
             m_CameraTargetRot *= Quaternion.Euler (-xRot, 0f, 0f);
@@ -74,11 +74,18 @@ namespace UnityStandardAssets.Characters.FirstPerson
 
         private void InternalLockUpdate()
         {
-            if(Input.GetKeyUp(KeyCode.Escape))
+            if (Mouse.current == null)
+            {
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = false;
+                return;
+            }
+
+            if (Keyboard.current != null && Keyboard.current.escapeKey.wasReleasedThisFrame)
             {
                 m_cursorIsLocked = false;
             }
-            else if(Input.GetMouseButtonUp(0))
+            else if (Mouse.current.leftButton.wasReleasedThisFrame)
             {
                 m_cursorIsLocked = true;
             }

@@ -29,6 +29,8 @@ public class LevelGenerator : MonoBehaviour {
 
 	// 2D array representing the map
 	private bool[,] mapData;
+	//Hashset representing the holes
+	private HashSet<Vector2Int> holes;
 
 	// we use these to dig through our maze and to spawn the pickup at the end
 	private int mazeX = 4, mazeY = 1;
@@ -38,6 +40,9 @@ public class LevelGenerator : MonoBehaviour {
 
 		// initialize map 2D array
 		mapData = GenerateMazeData();
+		
+		// generate holes
+		holes = GenerateHoleData(mazeX, mazeY);
 
 		// create actual maze blocks from maze boolean data
 		for (int z = 0; z < mazeSize; z++) {
@@ -46,20 +51,21 @@ public class LevelGenerator : MonoBehaviour {
 					CreateChildPrefab(wallPrefab, wallsParent, x, 1, z);
 					CreateChildPrefab(wallPrefab, wallsParent, x, 2, z);
 					CreateChildPrefab(wallPrefab, wallsParent, x, 3, z);
-				} else if (!characterPlaced) {
+				} else if (!characterPlaced && !holes.Contains(new Vector2Int(x, z))) {
 					
 					// place the character controller on the first empty wall we generate
 					characterController.transform.SetPositionAndRotation(
 						new Vector3(x, 1, z), Quaternion.identity
 					);
-
 					// flag as placed so we never consider placing again
 					characterPlaced = true;
 				}
 
-				// create floor and ceiling
-				CreateChildPrefab(floorPrefab, floorParent, x, 0, z);
-
+				// create floor if not a hole
+				if (!holes.Contains(new Vector2Int(x, z))){
+					CreateChildPrefab(floorPrefab, floorParent, x, 0, z);
+				}
+				// create ceiling
 				if (generateRoof) {
 					CreateChildPrefab(ceilingPrefab, wallsParent, x, 4, z);
 				}
@@ -73,7 +79,7 @@ public class LevelGenerator : MonoBehaviour {
 
 	// generates the booleans determining the maze, which will be used to construct the cubes
 	// actually making up the maze
-	bool[,] GenerateMazeData() {
+	private bool[,] GenerateMazeData() {
 		bool[,] data = new bool[mazeSize, mazeSize];
 
 		// initialize all walls to true
@@ -115,6 +121,23 @@ public class LevelGenerator : MonoBehaviour {
 		}
 
 		return data;
+	}
+
+	private HashSet<Vector2Int> GenerateHoleData(int coinXPosition, int coinYPosition)
+	{
+		var holes = new HashSet<Vector2Int>();
+		// create 2-5 random holes
+		//while (holes.Count < Random.Range(2, 5))
+		while (holes.Count < 50)
+		{
+			var x = Random.Range(0, mazeSize);
+			var y = Random.Range(0, mazeSize);
+			if (!mapData[x, y] && x != coinXPosition && y != coinYPosition)
+			{
+				holes.Add(new Vector2Int(x, y));
+			}
+		}
+		return holes;
 	}
 
 	// allow us to instantiate something and immediately make it the child of this game object's

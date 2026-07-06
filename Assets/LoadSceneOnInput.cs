@@ -1,19 +1,23 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
-public class LoadSceneOnInput : MonoBehaviour {
+public class LoadSceneOnInput : MonoBehaviour, IPointerClickHandler {
 
-	// Use this for initialization
-	void Start () {
-		
-	}
-	
-	// Update is called once per frame
 	void Update () {
-		if (Input.GetAxis("Submit") == 1) {
-			SceneManager.LoadScene("Play");
+		if (Keyboard.current != null &&
+		    (Keyboard.current.enterKey.wasPressedThisFrame ||
+		     Keyboard.current.numpadEnterKey.wasPressedThisFrame)) {
+			LoadPlay();
 		}
+	}
+
+	public void OnPointerClick(PointerEventData eventData) {
+		LoadPlay();
+	}
+
+	public void LoadPlay() {
+		SceneManager.LoadScene("Play");
 	}
 }
